@@ -69,7 +69,48 @@ def task_411_b(data):
     percentage = round(((220 - cc) * 100) / 220, 2)
 
     return cc, percentage
-    
+
+def task_411_2(data, *countries, force_country_limit=False):
+
+    def ignore_headings(data: dict) -> dict:
+        return {k: v for k, v in data.items() if k != "ï»¿CountryID" and k != "Country" and k != "IndicatorName"}
+
+    if force_country_limit and len(countries) != 3:
+        raise ValueError("You must provide 3 countries")
+
+    all_exports = []
+    all_imports = []
+
+    for row in data:
+        for country in countries:
+
+            if row["Country"] == country and row["IndicatorName"] == "Exports of goods and services":
+                exports = ignore_headings(row)
+                all_exports.append((country, exports))
+            elif row["Country"] == country and row["IndicatorName"] == "Imports of goods and services":
+                imports = ignore_headings(row)
+                all_imports.append((country, imports))
+
+    net_exports = []
+    for exports, imports in zip(all_exports, all_imports):
+
+        country = exports[0]
+        ret     = []
+
+        for x, y in zip(exports[1].values(), imports[1].values()):
+            x = int(x.replace(".", ""))
+            y = int(y.replace(".", ""))
+            ret.append(x - y)
+
+        net_exports.append(
+            (country, {str(i): v for i, v in enumerate(ret, 1970)})
+        )
+
+    return net_exports
+
+    #ret      = [(sd(x) - sd(y)) for e, i in zip(all_exports, all_imports) for x, y in zip(e[1].values(), i[1].values()) if (sd := lambda x: int(x.replace(".", "")))]
+    #splitted = [ret[i: i + 50] for i in range(0, len(ret), 50)]
+    #print(splitted)
 
 def main(filename: str):
     
@@ -78,6 +119,7 @@ def main(filename: str):
 
         t411_a = task_411_a(reader, "Final consumption expenditure")
         t411_b = task_411_b(reader)
+        t411_2 = task_411_2(reader, "Egypt", "Australia", "Cuba", force_country_limit=True)
 
         for row in reader:
             parsed_data = parse_data(data_row=row)
