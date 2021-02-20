@@ -42,7 +42,7 @@ class GDP:
 
         return c
 
-    def task_411_a(self, iname: str) -> list:
+    def task_411_a(self, iname: str, plot=False) -> list:
         ret = []
 
         for row in self.data:
@@ -54,6 +54,10 @@ class GDP:
                 ret.append(
                     (row["Country"], result)
                 )
+
+        if plot:
+            plt.bar([i for i in range(len(ret))], [v[1] for v in ret])
+            plt.show()
 
         return ret
 
@@ -75,7 +79,12 @@ class GDP:
 
         return cc, percentage
 
-    def task_411_2(self, *countries, force_country_limit=False) -> list:
+    def task_411_2(
+        self, 
+        *countries, 
+        force_country_limit=False, 
+        plot               =False
+    ) -> list:
 
         def ignore_headings(data: dict) -> dict:
             return {k: v for k, v in data.items() if k != "ï»¿CountryID" and k != "Country" and k != "IndicatorName"}
@@ -111,6 +120,20 @@ class GDP:
                 (country, {str(i): v for i, v in enumerate(ret, 1970)})
             )
 
+        if plot:
+
+            fig, axs = plt.subplots(len(net_exports), 1)
+            
+            if len(countries) > 1:
+                for i, (c, v) in enumerate(net_exports):
+                    axs[i].bar([i for i in range(len(v))], v.values())
+                    axs[i].set_title(c)
+            else:
+                axs.bar([i for i in range(len(net_exports[0][1]))], net_exports[0][1].values())
+                axs.set_title(net_exports[0][0])
+            plt.show()
+
+
         return net_exports
 
         # ret      = [(sd(x) - sd(y)) for e, i in zip(all_exports, all_imports) for x, y in zip(e[1].values(), i[1].values()) if (sd := lambda x: int(x.replace(".", "")))]
@@ -122,6 +145,6 @@ def main(filename: str):
         reader = DictReader(csvdata, delimiter=';')
 
         gdp = GDP(reader)
-        print(gdp.task_411_2("Egypt", "Australia", "Cuba", "Germany"))
+        ret = gdp.task_411_2("Germany", plot=True)
 
 main(args.filename)
