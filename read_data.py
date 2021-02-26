@@ -186,7 +186,6 @@ class GDP:
             axs = [axs]
 
         def setup(x, gdp_parsed=False):
-            return [i for i in range(1970, 2020)]
 
             if gdp_parsed:
                 return [v for v in self._ignore_headings(x[0][1]).values()]
