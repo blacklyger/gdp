@@ -171,7 +171,7 @@ class GDP:
         # splitted = [ret[i: i + 50] for i in range(0, len(ret), 50)]
         # print(splitted)
 
-    def task_413_a(self, *countries):
+    def task_413_b(self, *countries):
 
         if not self._countries_exist(list(countries)):
             nec = self._non_existing_countries(list(countries))
@@ -188,9 +188,9 @@ class GDP:
         def setup(x, gdp_parsed=False):
 
             if gdp_parsed:
-                return [v for v in self._ignore_headings(x[0][1]).values()]
+                return [v / 0x3B9ACA00 for v in self._ignore_headings(x[0][1]).values()]
 
-            return [self._parse_gdp(v) for v in self._ignore_headings(x[0]).values()]
+            return [self._parse_gdp(v) / 0x3B9ACA00 for v in self._ignore_headings(x[0]).values()]
 
         for i, country in enumerate(countries):
 
@@ -231,6 +231,6 @@ def main(filename: str):
 
     gdp = GDP(data)
     #ret = gdp.task_412("Germany", "Egypt", "Australia", plot=True)
-    gdp.task_413_a("Germany", "Egypt")
+    gdp.task_413_b("Germany")
 
 main(args.filename)
