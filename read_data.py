@@ -171,6 +171,34 @@ class GDP:
         # splitted = [ret[i: i + 50] for i in range(0, len(ret), 50)]
         # print(splitted)
 
+    def setup(self, x, r: int=1, gdp_parsed: bool=False) -> list: #0x3B9ACA00
+
+        if gdp_parsed:
+            return [v / r for v in self._ignore_headings(x[0][1]).values()]
+
+        return [self._parse_gdp(v) / r for v in self._ignore_headings(x[0]).values()]
+
+    def net_exports(self, country, r: int=1):
+        return self.setup(self.task_412(country), r=r, gdp_parsed=True)
+
+    def get_hce(self, country, r: int=1) -> list:
+        return self.setup(
+            [row for row in self.data if row["IndicatorName"].startswith("Household consumption expenditure") and row["Country"] == country],
+            r=r
+        )
+
+    def get_gdfce(self, country, r: int=1) -> list:
+        return self.setup(
+            [row for row in self.data if row["IndicatorName"] == "General government final consumption expenditure" and row["Country"] == country],
+            r=r
+        )
+
+    def get_gcf(self, country, r: int=1) -> list:
+        return self.setup(
+            [row for row in self.data if row["IndicatorName"] == "Gross capital formation" and row["Country"] == country],
+            r=r
+        )
+
     def task_413_b(self, *countries):
 
         if not self._countries_exist(list(countries)):
@@ -185,26 +213,14 @@ class GDP:
         if len(countries) == 1:
             axs = [axs]
 
-        def setup(x, gdp_parsed=False):
-
-            if gdp_parsed:
-                return [v / 0x3B9ACA00 for v in self._ignore_headings(x[0][1]).values()]
-
-            return [self._parse_gdp(v) / 0x3B9ACA00 for v in self._ignore_headings(x[0]).values()]
-
         for i, country in enumerate(countries):
-
-            net_exports = self.task_412(country)
-            hce         = [row for row in self.data if row["IndicatorName"].startswith("Household consumption expenditure")       and row["Country"] == country]
-            gdfce       = [row for row in self.data if row["IndicatorName"] == "General government final consumption expenditure" and row["Country"] == country]
-            gcf         = [row for row in self.data if row["IndicatorName"] == "Gross capital formation"                          and row["Country"] == country]
 
             label = [i for i in range(1970, 2020)]
 
-            _net_exports_y = setup(net_exports, gdp_parsed=True)
-            _hce_y         = setup(hce)
-            _gdfce_y       = setup(gdfce)
-            _gcf_y         = setup(gcf)
+            _net_exports_y = self.net_exports(country, r=0x3B9ACA00)
+            _hce_y         = self.get_hce(country, r=0x3B9ACA00)
+            _gdfce_y       = self.get_gdfce(country, r=0x3B9ACA00)
+            _gcf_y         = self.get_gcf(country, r=0x3B9ACA00)
 
             axs[i].xaxis.set_ticks(arange(1970, 2020, 1))
             axs[i].axhline(0, color='black')
@@ -222,15 +238,70 @@ class GDP:
         fig.legend(handels, labels, loc='upper left')
         plt.show()
 
+    def calculate_gdp(self, *countries) -> list:
+
+        ret = []
+        
+        for country in countries:
+            net_exports = self.net_exports(country, r=1000000000)
+            hce         = self.get_hce(country,     r=1000000000)
+            gdfce       = self.get_gdfce(country,   r=1000000000)
+            gcf         = self.get_gcf(country,     r=1000000000)
+
+            gdp = []
+
+            for _nexports, _hce, _gdfce, _gcf in zip(net_exports, hce, gdfce, gcf):
+                _gdp = _nexports + _hce + _gdfce + _gcf
+                gdp.append(_gdp)
+
+            ret.append(
+                (country, {str(i): v for i, v in enumerate(gdp, 1970)})
+            )
+
+        return ret
+
+    def gdp_proportion(self, *countries) -> list:
+
+        gdp       = self.calculate_gdp(*countries)
+        comp_data = namedtuple("cdata", "hce gdfce gcf")
+        ret       = []
+
+        for country, data in gdp:
+            hce   = self.get_hce(country,   r=1000000000)
+            gdfce = self.get_gdfce(country, r=1000000000)
+            gcf   = self.get_gcf(country,   r=1000000000)
+
+            d = []
+
+            for g, _hce, _gdfce, _gcf in zip(data.values(), hce, gdfce, gcf):
+                __hce   = round(_hce / g, 2)
+                __gdfce = round(_gdfce / g, 2)
+                __gcf   = round(_gcf / g, 2)
+
+                d.append((__hce, __gdfce, __gcf))
+
+            ret.append(
+                (country, {str(i): comp_data(_hce, _gdfce, _gcf) for i, (_hce, _gdfce, _gcf) in enumerate(d, 1970)})
+            )
+
+        return ret
+
+    def task_414_a(self, *countries) -> list:
+        pass
+
+    def task_414_b(self):
+        pass
+
+
 def main(filename: str):
     with open(filename, newline='') as csvdata:
         reader = DictReader(csvdata, delimiter=';')
         data = list(reader)
 
-    from threading import Thread
-
     gdp = GDP(data)
     #ret = gdp.task_412("Germany", "Egypt", "Australia", plot=True)
-    gdp.task_413_b("Germany")
+    r = gdp.gdp_proportion("Egypt", "Australia")
+    print(r)
+    #gdp.task_413_b("Egypt", "Germany")
 
 main(args.filename)
