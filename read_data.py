@@ -35,7 +35,7 @@ class GDP:
         return int(data.replace(".", ""))
 
     def _ignore_headings(self, data: dict) -> dict:
-        return {k: v for k, v in data.items() if k != "ï»¿CountryID" and k != "Country" and k != "IndicatorName"}
+        return {k: v for k, v in data.items() if k != "\ufeffCountryID" and k != "Country" and k != "IndicatorName"}
 
     def _count(self, row):
 
@@ -263,31 +263,53 @@ class GDP:
     def gdp_proportion(self, *countries) -> list:
 
         gdp       = self.calculate_gdp(*countries)
-        comp_data = namedtuple("cdata", "hce gdfce gcf")
+        comp_data = namedtuple("cdata", "net_exports hce gdfce gcf")
         ret       = []
 
         for country, data in gdp:
-            hce   = self.get_hce(country,   r=1000000000)
-            gdfce = self.get_gdfce(country, r=1000000000)
-            gcf   = self.get_gcf(country,   r=1000000000)
+            net_exports = self.net_exports(country, r=1000000000)
+            hce         = self.get_hce(country,     r=1000000000)
+            gdfce       = self.get_gdfce(country,   r=1000000000)
+            gcf         = self.get_gcf(country,     r=1000000000)
 
             d = []
 
-            for g, _hce, _gdfce, _gcf in zip(data.values(), hce, gdfce, gcf):
-                __hce   = round(_hce / g, 2)
-                __gdfce = round(_gdfce / g, 2)
-                __gcf   = round(_gcf / g, 2)
+            for g, _net_exports, _hce, _gdfce, _gcf in zip(data.values(), net_exports, hce, gdfce, gcf):
+                __net_exports = round(_net_exports / g, 2)
+                __hce         = round(_hce / g, 2)
+                __gdfce       = round(_gdfce / g, 2)
+                __gcf         = round(_gcf / g, 2)
 
-                d.append((__hce, __gdfce, __gcf))
+                d.append((__net_exports, __hce, __gdfce, __gcf))
 
             ret.append(
-                (country, {str(i): comp_data(_hce, _gdfce, _gcf) for i, (_hce, _gdfce, _gcf) in enumerate(d, 1970)})
+                (
+                    country, {str(i): comp_data(_net_exports, _hce, _gdfce, _gcf) 
+                    for i, (_net_exports, _hce, _gdfce, _gcf) in enumerate(d, 1970)}
+                )
             )
 
         return ret
 
     def task_414_a(self, *countries) -> list:
-        pass
+        
+        proportion = self.gdp_proportion(*countries)
+
+        fig, axs = plt.subplots()
+        
+        for country, data in proportion:
+            ne = [x.net_exports for x in data.values()]
+            hce = [x.hce for x in data.values()]
+            gdfce = [x.gdfce for x in data.values()]
+            gcf = [x.gcf for x in data.values()]
+        
+        axs.plot([i for i in range(len(ne))], ne)
+        axs.plot([i for i in range(len(hce))], hce)
+        axs.plot([i for i in range(len(gdfce))], gdfce)
+        axs.plot([i for i in range(len(gcf))], gcf)
+
+        plt.grid(True)
+        plt.show()
 
     def task_414_b(self):
         pass
@@ -300,8 +322,8 @@ def main(filename: str):
 
     gdp = GDP(data)
     #ret = gdp.task_412("Germany", "Egypt", "Australia", plot=True)
-    r = gdp.gdp_proportion("Egypt", "Australia")
-    print(r)
-    #gdp.task_413_b("Egypt", "Germany")
+    #gdp.task_414_a("Germany")
+    #r = gdp.gdp_proportion("Germany")
+    gdp.task_413_b("Egypt", "Germany")
 
 main(args.filename)
